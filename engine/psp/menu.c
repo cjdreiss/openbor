@@ -23,9 +23,9 @@
 #define LOG_SCREEN_TOP 3
 #define LOG_SCREEN_END 24
 
-char wMode[128] = {""};
-char wStatus[128] = {"WiFi Disabled"};
-char dListPath[256] = {""};
+char wMode[MAX_LABEL_LEN] = {""};
+char wStatus[MAX_LABEL_LEN] = {"WiFi Disabled"};
+char dListPath[MAX_FILENAME_LEN] = {""};
 int dListTotal;
 int dListCurrentPosition;
 int dListScrollPosition;
@@ -99,7 +99,7 @@ Image *getPreview(char *filename)
 	strncat(packfile, filename, strlen(filename));
 
 	// Create & Load & Scale Image
-	if(!loadscreen("data/bgs/title.gif", packfile, pal, PIXEL_x8, &title)) return NULL;
+	if(!loadscreen("data/bgs/title", packfile, pal, PIXEL_x8, &title)) return NULL;
 	if((scaledown = allocscreen(width, height, title->pixelformat)) == NULL) return NULL;
 	if((preview = createImage(width, height)) == NULL) return NULL;
 	scalescreen(scaledown, title);
@@ -119,13 +119,12 @@ Image *getPreview(char *filename)
    		dp += preview->textureWidth;
    	}
 
+	// ScreenShots within Menu will be saved as "Menu"
+	strncpy(packfile,"Menu.xxx",MAX_LABEL_LEN);
+
 	// Free Images and Terminiate Filecaching
 	freescreen(&title);
 	freescreen(&scaledown);
-
-	// ScreenShots within Menu will be saved as "Menu"
-	strncpy(packfile,"Menu.xxx",128);
-
 	return preview;
 }
 
@@ -231,33 +230,36 @@ void sortList()
 	}
 }
 
-int findPaks()
+static int findPaks(void)
 {
 	int i = 0;
 	DIR* dp = NULL;
 	struct dirent* ds;
 	dp = opendir(dListPath);
-	while((ds = readdir(dp)) != NULL)
-	{
-		if(packfile_supported(ds->d_name))
+	if(dp != NULL)
+   	{
+		while((ds = readdir(dp)) != NULL)
 		{
-			fileliststruct *copy = NULL;
-			if(filelist == NULL) filelist = malloc(sizeof(fileliststruct));
-			else
+			if(packfile_supported(ds->d_name))
 			{
-				copy = malloc(i * sizeof(fileliststruct));
-				memcpy(copy, filelist, i * sizeof(fileliststruct));
-				free(filelist);
-				filelist = malloc((i + 1) * sizeof(fileliststruct));
-				memcpy(filelist, copy, i * sizeof(fileliststruct));
-				free(copy); copy = NULL;
+				fileliststruct *copy = NULL;
+				if(filelist == NULL) filelist = malloc(sizeof(fileliststruct));
+				else
+				{
+					copy = malloc(i * sizeof(fileliststruct));
+					memcpy(copy, filelist, i * sizeof(fileliststruct));
+					free(filelist);
+					filelist = malloc((i + 1) * sizeof(fileliststruct));
+					memcpy(filelist, copy, i * sizeof(fileliststruct));
+					free(copy); copy = NULL;
+				}
+				memset(&filelist[i], 0, sizeof(fileliststruct));
+				strcpy(filelist[i].filename, ds->d_name);
+				i++;
 			}
-			memset(&filelist[i], 0, sizeof(fileliststruct));
-			strncpy(filelist[i].filename, ds->d_name, strlen(ds->d_name));
-			i++;
 		}
-	}
-	closedir(dp);
+		closedir(dp);
+   	}
 	return i;
 }
 
@@ -272,7 +274,7 @@ void drawMenu()
 	if(dListTotal < 1) printText(text, 30, 33, RED, 0, 0, "No Mods In Paks Folder!");
 	for(list=0; list<dListTotal; list++)
 	{
-		if(list<18)
+		if(list < MAX_MODS_NUM)
 		{
 			shift = 0;
 			colors = BLACK;
@@ -332,7 +334,7 @@ void drawBGMPlayer()
 	}
 	for(list=0; list<dListTotal; list++)
 	{
-		if(list<18)
+		if(list<MAX_MODS_NUM)
 		{
 			shift = 0;
 			colors = BLACK;
@@ -762,7 +764,7 @@ void menu(char *path)
 		//getAllPreviews();
 		packfile_music_read(filelist, dListTotal);
 		sound_init(12);
-		sound_start_playback(savedata.soundbits, savedata.soundrate);
+		sound_start_playback();
 
 		pControl = ControlMenu;
 		drawMenu();
@@ -786,6 +788,9 @@ void menu(char *path)
 			switch(ctrl)
 			{
 				case 1:
+					if (dListTotal > 0) done = 1;
+					break;
+
 				case 2:
 					done = 1;
 					break;
@@ -799,7 +804,7 @@ void menu(char *path)
 					break;
 
 				case -3:
-					drawBGMPlayer();
+					if (dListTotal > 0) drawBGMPlayer();
 					break;
 
 				case -4:
@@ -810,6 +815,8 @@ void menu(char *path)
 					drawLogs();
 					break;
 
+                default:
+					break;
 			}
 		}
 		sound_exit();

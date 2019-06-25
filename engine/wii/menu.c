@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <ogcsys.h>
 #include <wiiuse/wpad.h>
+#include "wupc/wupc.h"
 #include "wiiport.h"
 #include "video.h"
 #include "control.h"
@@ -137,12 +138,16 @@ void refreshInput()
 	unsigned long btns = 0;
 	unsigned short gcbtns;
 	WPADData *wpad;
+	struct WUPCData *wupc;
 
 	PAD_Init();
+	WUPC_Init();
 	PAD_ScanPads();
 	gcbtns = PAD_ButtonsDown(0) | PAD_ButtonsHeld(0);
+	WUPC_UpdateButtonStats();
 	WPAD_ScanPads();
 	wpad = WPAD_Data(0);
+	wupc = WUPC_Data(0);
 
 	if(wpad->exp.type == WPAD_EXP_CLASSIC)
 	{
@@ -159,6 +164,31 @@ void refreshInput()
 		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_DOWN)       btns |= DIR_DOWN;
 		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_LEFT)       btns |= DIR_LEFT;
 		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_RIGHT)      btns |= DIR_RIGHT;
+	}
+	else if (wupc != NULL) // Pro Controller
+	{
+		if(wupc->button & WPAD_CLASSIC_BUTTON_UP)		  btns |= DIR_UP;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_DOWN) 	  btns |= DIR_DOWN;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_LEFT) 	  btns |= DIR_LEFT;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_RIGHT) 	  btns |= DIR_RIGHT;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_PLUS) 	  btns |= CC_PLUS;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_MINUS)	  btns |= CC_MINUS;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_HOME)       btns |= CC_HOME;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_A) 		  btns |= CC_A;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_B)		  btns |= CC_B;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_Y)          btns |= CC_Y;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_X)          btns |= CC_X;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_FULL_R)     btns |= CC_R;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_FULL_L)     btns |= CC_L;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_ZL)         btns |= CC_ZL;
+		if(wupc->button & WPAD_CLASSIC_BUTTON_ZR)         btns |= CC_ZR;
+		
+		//analog stick  
+		if(wupc->yAxisL > 200)							  btns |= DIR_UP;
+		if(wupc->yAxisL < -200)							  btns |= DIR_DOWN;
+		if(wupc->xAxisL > 200)							  btns |= DIR_RIGHT;
+		if(wupc->xAxisL < -200)							  btns |= DIR_LEFT;
+			
 	}
 	else if(wpad->exp.type == WPAD_EXP_NUNCHUK) // Wiimote + Nunchuk
 	{
@@ -190,34 +220,43 @@ void refreshInput()
 	if(gcbtns & PAD_BUTTON_RIGHT)                         btns |= DIR_RIGHT;
 
 	// Controller buttons
-	if(wpad->btns_h & WPAD_BUTTON_1)                      btns |= WIIMOTE_1;
-	if(wpad->btns_h & WPAD_BUTTON_2)                      btns |= WIIMOTE_2;
-	if(wpad->btns_h & WPAD_BUTTON_A)                      btns |= WIIMOTE_A;
-	if(wpad->btns_h & WPAD_BUTTON_B)                      btns |= WIIMOTE_B;
-	if(wpad->btns_h & WPAD_BUTTON_MINUS)                  btns |= WIIMOTE_MINUS;
-	if(wpad->btns_h & WPAD_BUTTON_PLUS)                   btns |= WIIMOTE_PLUS;
-	if(wpad->btns_h & WPAD_BUTTON_HOME)                   btns |= WIIMOTE_HOME;
-	if(wpad->btns_h & WPAD_NUNCHUK_BUTTON_Z)              btns |= NUNCHUK_Z;
-	if(wpad->btns_h & WPAD_NUNCHUK_BUTTON_C)              btns |= NUNCHUK_C;
-	if(wpad->btns_h & WPAD_CLASSIC_BUTTON_A)              btns |= CC_A;
-	if(wpad->btns_h & WPAD_CLASSIC_BUTTON_B)              btns |= CC_B;
-	if(wpad->btns_h & WPAD_CLASSIC_BUTTON_Y)              btns |= CC_Y;
-	if(wpad->btns_h & WPAD_CLASSIC_BUTTON_X)              btns |= CC_X;
-	if(wpad->btns_h & WPAD_CLASSIC_BUTTON_MINUS)          btns |= CC_MINUS;
-	if(wpad->btns_h & WPAD_CLASSIC_BUTTON_PLUS)           btns |= CC_PLUS;
-	if(wpad->btns_h & WPAD_CLASSIC_BUTTON_HOME)           btns |= CC_HOME;
-	if(wpad->btns_h & WPAD_CLASSIC_BUTTON_FULL_R)         btns |= CC_R;
-	if(wpad->btns_h & WPAD_CLASSIC_BUTTON_FULL_L)         btns |= CC_L;
-	if(wpad->btns_h & WPAD_CLASSIC_BUTTON_ZL)             btns |= CC_ZL;
-	if(wpad->btns_h & WPAD_CLASSIC_BUTTON_ZR)             btns |= CC_ZR;
-	if(gcbtns & PAD_BUTTON_X)                             btns |= GC_X;
-	if(gcbtns & PAD_BUTTON_Y)                             btns |= GC_Y;
-	if(gcbtns & PAD_BUTTON_A)                             btns |= GC_A;
-	if(gcbtns & PAD_BUTTON_B)                             btns |= GC_B;
-	if(gcbtns & PAD_TRIGGER_R)                            btns |= GC_R;
-	if(gcbtns & PAD_TRIGGER_L)                            btns |= GC_L;
-	if(gcbtns & PAD_TRIGGER_Z)                            btns |= GC_Z;
-	if(gcbtns & PAD_BUTTON_START)                         btns |= GC_START;
+	if(wpad->exp.type <= WPAD_EXP_NUNCHUK)
+	{
+		if(wpad->btns_h & WPAD_BUTTON_1)                      btns |= WIIMOTE_1;
+		if(wpad->btns_h & WPAD_BUTTON_2)                      btns |= WIIMOTE_2;
+		if(wpad->btns_h & WPAD_BUTTON_A)                      btns |= WIIMOTE_A;
+		if(wpad->btns_h & WPAD_BUTTON_B)                      btns |= WIIMOTE_B;
+		if(wpad->btns_h & WPAD_BUTTON_MINUS)                  btns |= WIIMOTE_MINUS;
+		if(wpad->btns_h & WPAD_BUTTON_PLUS)                   btns |= WIIMOTE_PLUS;
+		if(wpad->btns_h & WPAD_BUTTON_HOME)                   btns |= WIIMOTE_HOME;
+		if(wpad->btns_h & WPAD_NUNCHUK_BUTTON_Z)              btns |= NUNCHUK_Z;
+		if(wpad->btns_h & WPAD_NUNCHUK_BUTTON_C)              btns |= NUNCHUK_C;
+	}
+	else if(wpad->exp.type == WPAD_EXP_CLASSIC)
+	{
+		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_A)              btns |= CC_A;
+		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_B)              btns |= CC_B;
+		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_Y)              btns |= CC_Y;
+		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_X)              btns |= CC_X;
+		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_MINUS)          btns |= CC_MINUS;
+		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_PLUS)           btns |= CC_PLUS;
+		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_HOME)           btns |= CC_HOME;
+		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_FULL_R)         btns |= CC_R;
+		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_FULL_L)         btns |= CC_L;
+		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_ZL)             btns |= CC_ZL;
+		if(wpad->btns_h & WPAD_CLASSIC_BUTTON_ZR)             btns |= CC_ZR;
+	}
+	else
+	{
+		if(gcbtns & PAD_BUTTON_X)                             btns |= GC_X;
+		if(gcbtns & PAD_BUTTON_Y)                             btns |= GC_Y;
+		if(gcbtns & PAD_BUTTON_A)                             btns |= GC_A;
+		if(gcbtns & PAD_BUTTON_B)                             btns |= GC_B;
+		if(gcbtns & PAD_TRIGGER_R)                            btns |= GC_R;
+		if(gcbtns & PAD_TRIGGER_L)                            btns |= GC_L;
+		if(gcbtns & PAD_TRIGGER_Z)                            btns |= GC_Z;
+		if(gcbtns & PAD_BUTTON_START)                         btns |= GC_START;
+	}
 
 	// update buttons pressed (not held)
 	buttonsPressed = btns & ~buttonsHeld;
@@ -301,35 +340,36 @@ void sortList()
 	}
 }
 
-int findPaks(void)
+static int findPaks(void)
 {
 	int i = 0;
 	DIR* dp = NULL;
 	struct dirent* ds;
-
 	dp = opendir(paksDir);
-
-	while((ds = readdir(dp)) != NULL)
-	{
-		if(packfile_supported(ds->d_name))
+	if(dp != NULL)
+   	{
+		while((ds = readdir(dp)) != NULL)
 		{
-			fileliststruct *copy = NULL;
-			if(filelist == NULL) filelist = malloc(sizeof(fileliststruct));
-			else
+			if(packfile_supported(ds->d_name))
 			{
-				copy = malloc(i * sizeof(fileliststruct));
-				memcpy(copy, filelist, i * sizeof(fileliststruct));
-				free(filelist);
-				filelist = malloc((i + 1) * sizeof(fileliststruct));
-				memcpy(filelist, copy, i * sizeof(fileliststruct));
-				free(copy); copy = NULL;
+				fileliststruct *copy = NULL;
+				if(filelist == NULL) filelist = malloc(sizeof(fileliststruct));
+				else
+				{
+					copy = malloc(i * sizeof(fileliststruct));
+					memcpy(copy, filelist, i * sizeof(fileliststruct));
+					free(filelist);
+					filelist = malloc((i + 1) * sizeof(fileliststruct));
+					memcpy(filelist, copy, i * sizeof(fileliststruct));
+					free(copy); copy = NULL;
+				}
+				memset(&filelist[i], 0, sizeof(fileliststruct));
+				strcpy(filelist[i].filename, ds->d_name);
+				i++;
 			}
-			memset(&filelist[i], 0, sizeof(fileliststruct));
-			strncpy(filelist[i].filename, ds->d_name, strlen(ds->d_name));
-			i++;
 		}
-	}
-	closedir(dp);
+		closedir(dp);
+   	}
 	return i;
 }
 
@@ -347,7 +387,12 @@ void writeToScreen(s_screen* src)
 
 void drawScreens(s_screen *Image, int x, int y)
 {
-	if(Image) copyscreen_o(Scaler, Image, x, y);
+	if(Image)
+	{
+		putscreen(Scaler, Image, x, y, NULL);
+		freescreen(&Image);
+		Image = NULL;
+	}
 	writeToScreen(Scaler);
 	video_copy_screen(Screen);
 }
@@ -410,28 +455,36 @@ void printText(int x, int y, int col, int backcol, int fill, char *format, ...)
 
 s_screen *getPreview(char *filename)
 {
-	int width = factor == 4 ? 640 : (factor == 2 ? 320 : 160);
-	int height = factor == 4 ? 480 : (factor == 2 ? 240 : 120);
+	int width = 160; //preview width
+	int height = 120; //preview height
 	s_screen *title = NULL;
 	s_screen *scale = NULL;
-
-	// Grab current path and filename
-	getBasePath(packfile, filename, 1);
-
-	// Create & Load & Scale Image
-	if(!loadscreen("data/bgs/title.gif", packfile, NULL, PIXEL_x8, &title)) return NULL;
-	if((scale = allocscreen(width, height, title->pixelformat)) == NULL) return NULL;
-
-	scalescreen(scale, title);
-	memcpy(scale->palette, scale->palette, PAL_BYTES);
-
-	// Free Images and Terminate FileCaching
-	freescreen(&title);
-
+	FILE *preview = NULL;
+	
+	char ssPath[MAX_FILENAME_LEN] = "";
+	getBasePath(ssPath,"ScreenShots/",0); //get screenshots directory from base path
+	strncat(ssPath, filename, strrchr(filename, '.') - filename); //remove extension from pak filename
+	strcat(ssPath, " - 0000.png"); //add to end of pak filename
+	preview = fopen(ssPath, "r"); //open preview image
+	
+	if(preview) //if preview image found
+	{
+		fclose(preview); //close preview image
+		strcpy(packfile,"null.file"); //dummy pak file since we are loading outside a pak file
+		
+		//Create & Load & Scale Image
+		if(!loadscreen32(ssPath, packfile, &title)) return NULL; //exit if image screen not loaded
+		if((scale = allocscreen(width, height, title->pixelformat)) == NULL) return NULL; //exit if scaled screen not 
+		scalescreen32(scale, title); //copy image to scaled down screen 
+		
+	} else { return NULL; }
+	
 	// ScreenShots within Menu will be saved as "Menu"
-	strncpy(packfile,"Menu.ext",128);
-
-	return scale;
+	strncpy(packfile,"Menu.ext",MAX_FILENAME_LEN);
+	
+	// Free Images and Terminate FileCaching
+	if(title) freescreen(&title); //free image screen
+	return scale; // return scaled down screen
 }
 
 int ControlMenu()
@@ -439,7 +492,7 @@ int ControlMenu()
 	int status = -1;
 	int dListMaxDisplay = 17;
 	//bothnewkeys = 0;
-	//inputrefresh();
+	//inputrefresh(0);
 	refreshInput();
 	switch(buttonsPressed)
 	{
@@ -541,20 +594,20 @@ void drawMenu()
 	if(dListTotal < 1) printText((isWide ? 30 : 8), (isWide ? 33 : 24), RED, 0, 0, "No Mods In Paks Folder!");
 	for(list=0; list<dListTotal; list++)
 	{
-		if(list<18)
+		if(list < MAX_MODS_NUM)
 		{
 			shift = 0;
 			colors = GRAY;
 			strncpy(listing, "", (isWide ? 44 : 28));
 			if(strlen(filelist[list+dListScrollPosition].filename)-4 < (isWide ? 44 : 28))
-				strncpy(listing, filelist[list+dListScrollPosition].filename, strlen(filelist[list+dListScrollPosition].filename)-4);
+				safe_strncpy(listing, filelist[list+dListScrollPosition].filename, strlen(filelist[list+dListScrollPosition].filename)-4);
 			if(strlen(filelist[list+dListScrollPosition].filename)-4 > (isWide ? 44 : 28))
-				strncpy(listing, filelist[list+dListScrollPosition].filename, (isWide ? 44 : 28));
+				safe_strncpy(listing, filelist[list+dListScrollPosition].filename, (isWide ? 44 : 28));
 			if(list == dListCurrentPosition)
 			{
 				shift = 2;
 				colors = RED;
-				Image = NULL;
+				Image = getPreview(filelist[list+dListScrollPosition].filename);
 				if(Image)
 				{
 					clipX = factor * (isWide ? 286 : 155);
@@ -579,12 +632,15 @@ void drawMenu()
 	printText((isWide ? 324 : 192),(isWide ? 191 : 176), DARK_RED, 0, 0, "SecurePAK Edition");
 #endif
 
-	drawScreens(Image, clipX, clipY);
-
 	if(Image)
 	{
-		freescreen(&Image);
-		Image = NULL;
+	//draw screen with the preview image
+	drawScreens(Image, clipX, clipY);
+	}
+	else
+	{
+	//draw screen without preview
+	drawScreens(NULL, 0, 0);
 	}
 }
 
@@ -601,7 +657,7 @@ void drawLogs()
 	while(!done)
 	{
 	    copyScreens(Viewer);
-	    //inputrefresh();
+	    //inputrefresh(0);
 	    refreshInput();
 	    printText((isWide ? 410 : 250), 3, RED, 0, 0, "Quit : 1/B");
 		if(buttonsPressed & (WIIMOTE_1|CC_B|GC_B)) done = 1;
@@ -716,52 +772,64 @@ void Menu()
 	setVideoMode();
 	drawLogo();
 
-	dListTotal = findPaks();
-	dListCurrentPosition = 0;
-	if(dListTotal != 1)
+	// Skips menu if we already have a .pak to load
+	int quicklaunch = (packfile[0] == '\0') ? 0 : 1;
+
+	if(!quicklaunch)
 	{
-		sortList();
-		getAllLogs();
-		initMenu(1);
-		drawMenu();
-		pControl = ControlMenu;
-
-		while(!done)
+		dListTotal = findPaks();
+		dListCurrentPosition = 0;
+		if(dListTotal != 1)
 		{
-			ctrl = Control();
-			switch(ctrl)
+			sortList();
+			getAllLogs();
+			initMenu(1);
+			drawMenu();
+			pControl = ControlMenu;
+
+			while(!done)
 			{
-				case 1:
-				case 2:
-					done = 1;
-					break;
+				ctrl = Control();
+				switch(ctrl)
+				{
+					case 1:
+						if (dListTotal > 0) done = 1;
+						break;
 
-				case 3:
-					drawLogs();
-					break;
+					case 2:
+						done = 1;
+						break;
 
-				case -1:
-					drawMenu();
-					break;
+					case 3:
+						drawLogs();
+						break;
 
-				case -2:
-					// BGM player isn't supported
-					break;
+					case -1:
+						drawMenu();
+						break;
+
+					case -2:
+						// BGM player isn't supported
+						break;
+
+		            default:
+						break;
+				}
+			}
+			freeAllLogs();
+			termMenu();
+			if(ctrl == 2)
+			{
+				if (filelist)
+				{
+					free(filelist);
+					filelist = NULL;
+				}
+				borExit(0);
 			}
 		}
-		freeAllLogs();
-		termMenu();
-		if(ctrl == 2)
-		{
-			if (filelist)
-			{
-				free(filelist);
-				filelist = NULL;
-			}
-			borExit(0);
-		}
+		getBasePath(packfile, filelist[dListCurrentPosition+dListScrollPosition].filename, 1);
 	}
-	getBasePath(packfile, filelist[dListCurrentPosition+dListScrollPosition].filename, 1);
 	free(filelist);
 }
 

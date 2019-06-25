@@ -24,6 +24,12 @@
 #include "utils.h"
 #include "safealloc.h"
 
+#define		MAX_BUFFER_LEN		512
+#define		MAX_FILENAME_LEN	256
+#define		MAX_LABEL_LEN       128
+
+#define MAX_MODS_NUM 100
+
 #ifdef PSP
 #include <stdarg.h>
 #include <psppower.h>
@@ -47,6 +53,9 @@
 #include <gctypes.h>
 #include <ogc/conf.h>
 #include "wiiport.h"
+// For devkitPPC r29+
+#define stricmp strcasecmp
+#define strnicmp strncasecmp
 #endif
 
 #ifdef VITA
@@ -59,12 +68,6 @@
 #include "packfile.h"
 
 /////////////////////////////////////////////////////////////////////////////
-
-#define		exit				borExit
-#define		time				borTime
-#define		kill				borKill
-#define		pause				borPause
-#define		shutdown			borShutdown
 
 #ifndef PP_TEST
 #define printf writeToLogFile

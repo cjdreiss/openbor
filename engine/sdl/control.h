@@ -133,13 +133,14 @@
 #define SDL_JoystickName(x) SDL_JoystickName(joystick[x])
 #endif
 
-
 typedef struct{
 	int		settings[JOY_MAX_INPUTS];
-	u32		keyflags, newkeyflags;
+	u64		keyflags, newkeyflags;
 	int		kb_break;
 }s_playercontrols;
 
+void open_joystick(int i);
+void close_joystick(int i);
 void control_exit();
 void control_init(int joy_enable);
 int control_usejoy(int enable);
@@ -148,10 +149,35 @@ int control_getjoyenabled();
 void control_setkey(s_playercontrols * pcontrols, unsigned int flag, int key);
 int control_scankey();
 
+void set_default_joystick_keynames(int i);
+void reset_joystick_map(int i);
+char* get_joystick_name(const char* name);
 char *control_getkeyname(unsigned int keycode);
 void control_update(s_playercontrols ** playercontrols, int numplayers);
-void control_rumble(int port, int msec);
+void control_rumble(int port, int ratio, int msec);
 int keyboard_getlastkey();
+
+#ifdef ANDROID
+#define MAX_POINTERS 30
+typedef enum
+{
+    TOUCH_STATUS_UP,
+    TOUCH_STATUS_DOWN
+} touch_status;
+
+typedef struct TouchStatus {
+    float px[MAX_POINTERS];
+    float py[MAX_POINTERS];
+    SDL_FingerID pid[MAX_POINTERS];
+    touch_status pstatus[MAX_POINTERS];
+} TouchStatus;
+
+int is_touchpad_vibration_enabled();
+void control_update_android_touch(TouchStatus *touch_info, int maxp, Uint8* keystate, Uint8* keystate_def);
+int is_touch_area(float x, float y);
+#endif
+
+
 
 #endif
 

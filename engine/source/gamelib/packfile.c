@@ -33,7 +33,6 @@
 #include "stristr.h"
 #include "packfile.h"
 #include "filecache.h"
-#include "globals.h"
 #include "soundmix.h"
 #include "savedata.h"
 #include "List.h"
@@ -50,8 +49,6 @@
 #pragma pack (1)
 #endif
 
-
-#define PACKFILE_PATH_MAX 512 // Maximum length of file path string.
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -622,7 +619,7 @@ void makefilenamecache(void)
         {
             return;
         }
-        strncpy(target, (char *)pak_header + hpos + 12, PACKFILE_PATH_MAX);
+        strncpy(target, (char *)pak_header + hpos + 12, PACKFILE_PATH_MAX - 1);
         fnlc(target);
         List_InsertAfter(filenamelist, (void *) hpos, target);
         hpos += readlsb32(pak_header + hpos);
@@ -695,7 +692,7 @@ int openreadaheadpackfile(const char *filename, const char *packfilename, int re
         makefilenamecache();
     }
 
-    strncpy(target, filename, PACKFILE_PATH_MAX);
+    strncpy(target, filename, PACKFILE_PATH_MAX - 1);
     fnlc(target);
 
     n = List_GetNodeByName(filenamelist, target);
@@ -1376,7 +1373,7 @@ int packfile_supported(const char *filename)
 
 /////////////////////////////////////////////////////////////////////////////
 
-void packfile_get_titlename(char In[80], char Out[80])
+void packfile_get_titlename(char In[MAX_FILENAME_LEN], char Out[MAX_FILENAME_LEN])
 {
     int i, x = 0, y = 0;
     for(i = 0; i < (int)strlen(In); i++)
@@ -1408,7 +1405,7 @@ void packfile_music_read(fileliststruct *filelist, int dListTotal)
         getBasePath(packfile, filelist[i].filename, 1);
         if(stristr(packfile, ".pak"))
         {
-            memset(filelist[i].bgmTracks, 0, PACKFILE_PATH_MAX);
+            memset(filelist[i].bgmTracks, 0, MAX_TRACKS * sizeof(unsigned int));
             filelist[i].nTracks = 0;
             fd = fopen(packfile, "rb");
             if(fd == NULL)
@@ -1440,7 +1437,7 @@ void packfile_music_read(fileliststruct *filelist, int dListTotal)
                     {
                         goto nextpak;
                     }
-                    if(filelist[i].nTracks < PACKFILE_PATH_MAX)
+                    if(filelist[i].nTracks < MAX_TRACKS)
                     {
                         packfile_get_titlename(pn.namebuf, filelist[i].bgmFileName[filelist[i].nTracks]);
                         filelist[i].bgmTracks[filelist[i].nTracks] = off;

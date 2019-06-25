@@ -13,6 +13,8 @@
 
 #include <stdio.h>
 
+#include "globals.h"
+
 #ifndef WIN
 #include <unistd.h>
 #define O_BINARY 0
@@ -30,6 +32,9 @@
 #include "types.h"
 #endif
 
+#define PACKFILE_PATH_MAX 512 // Maximum length of file path string.
+#define MAX_TRACKS 256 // Maximum number of BGM Tracks. IMPORTANT: Wii max number is 256 (maybe for low memory??)
+
 //
 // Structure used for handling packfiles
 //
@@ -38,16 +43,16 @@ typedef struct pnamestruct
     unsigned int pns_len;	    // Length of the struct in bytes
     unsigned int filestart;	    // Start position of referenced file
     unsigned int filesize;	    // Size of referenced file
-    char		 namebuf[256];	// Buffer to hold the file's name
+    char		 namebuf[MAX_FILENAME_LEN];	// Buffer to hold the file's name
 } pnamestruct;
 
 typedef struct fileliststruct
 {
-    char filename[256];
+    char filename[MAX_FILENAME_LEN];
     int nTracks;
-    char bgmFileName[256][256];
+    char bgmFileName[MAX_TRACKS][MAX_FILENAME_LEN];
     int bgmTrack;
-    unsigned int bgmTracks[256];
+    unsigned int bgmTracks[MAX_TRACKS];
 #ifdef SDL
     SDL_Surface *preview;
 #elif PSP

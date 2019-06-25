@@ -57,6 +57,11 @@ typedef void DIR;
 #define closedir(X) sceIoDclose((SceUID)(X))
 #endif
 
+#if ANDROID
+#include "sdlport.h"
+#include "savepng.h"
+#endif
+
 #ifdef WIN
 #define MKDIR(x) mkdir(x)
 #elif VITA
@@ -70,29 +75,32 @@ typedef void DIR;
 #define OPEN_LOGFILE(type)   type ? fopen(getFullPath("Logs/OpenBorLog.txt"), "wt") : fopen(getFullPath("Logs/ScriptLog.txt"), "wt")
 #define APPEND_LOGFILE(type) type ? fopen(getFullPath("Logs/OpenBorLog.txt"), "at") : fopen(getFullPath("Logs/ScriptLog.txt"), "at")
 #define READ_LOGFILE(type)   type ? fopen(getFullPath("Logs/OpenBorLog.txt"), "rt") : fopen(getFullPath("Logs/ScriptLog.txt"), "rt")
-#define COPY_ROOT_PATH(buf, name) strcpy(buf, rootDir); strncat(buf, name, strlen(name)); strncat(buf, "/", 1);
-#define COPY_PAKS_PATH(buf, name) strncpy(buf, paksDir, strlen(paksDir)); strncat(buf, "/", 1); strncat(buf, name, strlen(name));
+#define COPY_ROOT_PATH(buf, name) strcpy(buf, rootDir); strcat(buf, name); strcat(buf, "/");
+#define COPY_PAKS_PATH(buf, name) strcpy(buf, paksDir); strcat(buf, "/"); strcat(buf, name);
 #elif VITA
 #define CHECK_LOGFILE(type)  type ? fileExists("ux0:/data/OpenBOR/Logs/OpenBorLog.txt") : fileExists("./Logs/ScriptLog.txt")
 #define OPEN_LOGFILE(type)   type ? fopen("ux0:/data/OpenBOR/Logs/OpenBorLog.txt", "wt") : fopen("ux0:/data/OpenBOR/Logs/ScriptLog.txt", "wt")
 #define APPEND_LOGFILE(type) type ? fopen("ux0:/data/OpenBOR/Logs/OpenBorLog.txt", "at") : fopen("ux0:/data/OpenBOR/Logs/ScriptLog.txt", "at")
 #define READ_LOGFILE(type)   type ? fopen("ux0:/data/OpenBOR/Logs/OpenBorLog.txt", "rt") : fopen("ux0:/data/OpenBOR/Logs/ScriptLog.txt", "rt")
-#define COPY_ROOT_PATH(buf, name) strcpy(buf, "ux0:/data/OpenBOR/"); strcat(buf, name); strncat(buf, "/", 1);
+#define COPY_ROOT_PATH(buf, name) strcpy(buf, "ux0:/data/OpenBOR/"); strcat(buf, name); strcat(buf, "/");
 #define COPY_PAKS_PATH(buf, name) strcpy(buf, "ux0:/data/OpenBOR/Paks/"); strcat(buf, name);
 #elif ANDROID
-#define CHECK_LOGFILE(type)  type ? fileExists("/mnt/sdcard/OpenBOR/Logs/OpenBorLog.txt") : fileExists("/mnt/sdcard/OpenBOR/Logs/ScriptLog.txt")
-#define OPEN_LOGFILE(type)   type ? fopen("/mnt/sdcard/OpenBOR/Logs/OpenBorLog.txt", "wt") : fopen("/mnt/sdcard/OpenBOR/Logs/ScriptLog.txt", "wt")
-#define APPEND_LOGFILE(type) type ? fopen("/mnt/sdcard/OpenBOR/Logs/OpenBorLog.txt", "at") : fopen("/mnt/sdcard/OpenBOR/Logs/ScriptLog.txt", "at")
-#define READ_LOGFILE(type)   type ? fopen("/mnt/sdcard/OpenBOR/Logs/OpenBorLog.txt", "rt") : fopen("/mnt/sdcard/OpenBOR/Logs/ScriptLog.txt", "rt")
-#define COPY_ROOT_PATH(buf, name) strncpy(buf, "/mnt/sdcard/OpenBOR/", 20); strncat(buf, name, strlen(name)); strncat(buf, "/", 1);
-#define COPY_PAKS_PATH(buf, name) strncpy(buf, "/mnt/sdcard/OpenBOR/Paks/", 25); strncat(buf, name, strlen(name));
+//msmalik681 now using AndroidRoot fuction from sdlport.c to update all android paths.
+#define Alog AndroidRoot("Logs/OpenBorLog.txt")
+#define Aslog AndroidRoot("Logs/ScriptLog.txt")
+#define CHECK_LOGFILE(type)  type ? fileExists(Alog) : fileExists(Aslog)
+#define OPEN_LOGFILE(type)   type ? fopen(Alog, "wt") : fopen(Aslog, "wt")
+#define APPEND_LOGFILE(type) type ? fopen(Alog, "at") : fopen(Aslog, "at")
+#define READ_LOGFILE(type)   type ? fopen(Alog, "rt") : fopen(Aslog, "rt")
+#define COPY_ROOT_PATH(buf, name) strncpy(buf, rootDir, strlen(rootDir)); strncat(buf, name, strlen(name)); strncat(buf, "/", 1);
+#define COPY_PAKS_PATH(buf, name) strncpy(buf, paksDir, strlen(paksDir)); strncat(buf, "/", 1); strncat(buf, name, strlen(name));
 #else
 #define CHECK_LOGFILE(type)  type ? fileExists("./Logs/OpenBorLog.txt") : fileExists("./Logs/ScriptLog.txt")
 #define OPEN_LOGFILE(type)   type ? fopen("./Logs/OpenBorLog.txt", "wt") : fopen("./Logs/ScriptLog.txt", "wt")
 #define APPEND_LOGFILE(type) type ? fopen("./Logs/OpenBorLog.txt", "at") : fopen("./Logs/ScriptLog.txt", "at")
 #define READ_LOGFILE(type)   type ? fopen("./Logs/OpenBorLog.txt", "rt") : fopen("./Logs/ScriptLog.txt", "rt")
-#define COPY_ROOT_PATH(buf, name) strncpy(buf, "./", 2); strncat(buf, name, strlen(name)); strncat(buf, "/", 1);
-#define COPY_PAKS_PATH(buf, name) strncpy(buf, "./Paks/", 7); strncat(buf, name, strlen(name));
+#define COPY_ROOT_PATH(buf, name) strcpy(buf, "./"); strcat(buf, name); strcat(buf, "/");
+#define COPY_PAKS_PATH(buf, name) strcpy(buf, "./Paks/"); strcat(buf, name);
 #endif
 
 void debugBuf(unsigned char *buf, size_t size, int columns)
@@ -147,7 +155,7 @@ u32 debug_time = 0;
 void getBasePath(char *newName, char *name, int type)
 {
 #ifndef DC
-    char buf[128] = {""};
+    char buf[MAX_BUFFER_LEN] = {""};
     switch(type)
     {
     case 0:
@@ -157,9 +165,9 @@ void getBasePath(char *newName, char *name, int type)
         COPY_PAKS_PATH(buf, name);
         break;
     }
-    memcpy(newName, buf, sizeof(buf));
+    strcpy(newName, buf);
 #else
-    memcpy(newName, name, 128);
+    strncpy(newName, name, MAX_LABEL_LEN - 1);
 #endif
 }
 
@@ -168,10 +176,10 @@ void getBasePath(char *newName, char *name, int type)
 #ifndef DC
 int dirExists(char *dname, int create)
 {
-    char realName[128] = {""};
+    char realName[MAX_LABEL_LEN] = {""};
     DIR	*fd1 = NULL;
     int  fd2 = -1;
-    strncpy(realName, dname, 128);
+    strncpy(realName, dname, MAX_LABEL_LEN - 1);
     fd1 = opendir(realName);
     if(fd1 != NULL)
     {
@@ -298,7 +306,7 @@ void *checkAlloc(void *ptr, size_t size, const char *func, const char *file, int
 #ifndef WIN
         writeToLogFile("Memory usage at exit: %u\n", mallinfo().arena);
 #endif
-        exit(2);
+        borExit(2);
     }
     return ptr;
 }
@@ -312,7 +320,7 @@ void exitIfFalse(int value, const char *assertion, const char *func, const char 
                        "\n*            Shutting Down            *\n\n");
         writeToLogFile("Assertion `%s' failed in function '%s' at %s:%i.\n", assertion, func, file, line);
         writeToLogFile("This is an OpenBOR bug.  Please report this at www.chronocrash.com.\n\n");
-        exit(1);
+        borExit(1);
     }
 }
 
@@ -334,24 +342,24 @@ void getPakName(char *name, int type)
     int i, x, y;
     char mod[256] = {""};
 
-    strncpy(mod, packfile, strlen(packfile) - 4);
+    memcpy(mod, packfile, strlen(packfile) - 4);
 
     switch(type)
     {
     case 0:
-        strncat(mod, ".sav", 4);
+        strcat(mod, ".sav");
         break;
     case 1:
-        strncat(mod, ".hi", 3);
+        strcat(mod, ".hi");
         break;
     case 2:
-        strncat(mod, ".scr", 4);
+        strcat(mod, ".scr");
         break;
     case 3:
-        strncat(mod, ".inp", 4);
+        strcat(mod, ".inp");
         break;
     case 4:
-        strncat(mod, ".cfg", 4);
+        strcat(mod, ".cfg");
         break;
     default:
         // Loose extension!
@@ -389,8 +397,8 @@ void screenshot(s_screen *vscreen, unsigned char *pal, int ingame)
 {
 #ifndef DC
     int	 shotnum = 0;
-    char shotname[128] = {""};
-    char modname[128]  = {""};
+    char shotname[1024] = {""};
+    char modname[MAX_FILENAME_LEN]  = {""};
 
     getPakName(modname, 99);
 #ifdef PSP
@@ -466,120 +474,16 @@ int searchList(const char *list[], const char *value, int length)
     return -1;
 }
 
-// Optimized search in an arranged string table, return the index
-/*int searchListB(const char *list[], const char *value, int length)
-{
-    int i;
-    int a = 0;
-    int b = length / 2;
-    int c = length - 1;
-    int v = value[0];
-
-    // We must convert uppercase values to lowercase,
-    // since this is how every command is written in
-    // our source.  Refer to an ASCII Chart
-    if(v >= 0x41 && v <= 0x5A)
-    {
-        v += 0x20;
-    }
-
-    // Index value equals middle value,
-    // Lets search starting from center.
-    if(v == list[b][0])
-    {
-        if(stricmp(list[b], value) == 0)
-        {
-            return b;
-        }
-
-        // Search Down the List.
-        if(v == list[b - 1][0])
-        {
-            for(i = b - 1 ; i >= 0; i--)
-            {
-                if(stricmp(list[i], value) == 0)
-                {
-                    return i;
-                }
-                if(v != list[i - 1][0])
-                {
-                    break;
-                }
-            }
-        }
-
-        // Search Up the List.
-        if(v == list[b + 1][0])
-        {
-            for(i = b + 1; i < length; i++)
-            {
-                if(stricmp(list[i], value) == 0)
-                {
-                    return i;
-                }
-                if(v != list[i + 1][0])
-                {
-                    break;
-                }
-            }
-        }
-
-        // No match, return failure.
-        goto searchListFailed;
-    }
-
-    // Define the starting point.
-    if(v >= list[b + 1][0])
-    {
-        a = b + 1;
-    }
-    else if(v <= list[b - 1][0])
-    {
-        c = b - 1;
-    }
-    else
-    {
-        goto searchListFailed;
-    }
-
-    // Search Up from starting point.
-    for(i = a; i <= c; i++)
-    {
-        if(v == list[i][0])
-        {
-            if(stricmp(list[i], value) == 0)
-            {
-                return i;
-            }
-            if(v != list[i + 1][0])
-            {
-                break;
-            }
-        }
-    }
-
-searchListFailed:
-
-    // The search failed!
-    // On five reasons for failure!
-    // 1. Is the list in alphabetical order?
-    // 2. Is the first letter lowercase in list?
-    // 3. Does the value exist in the list?
-    // 4. Is it a typo?
-    // 5. Is it a text file error?
-    return -1;
-}*/
-
 char *commaprint(u64 n)
 {
     static int comma = '\0';
-    static char retbuf[30];
+    static char retbuf[32];
     char *p = &retbuf[sizeof(retbuf) - 1];
     int i = 0;
 
     if(comma == '\0')
     {
-#ifndef ANDROID
+        #ifndef ANDROID
         struct lconv *lcp = localeconv();
         if(lcp != NULL)
         {
@@ -593,7 +497,9 @@ char *commaprint(u64 n)
                 comma = ',';
             }
         }
-#endif
+        #else
+        comma = ',';
+        #endif
     }
 
     *p = '\0';
@@ -637,6 +543,83 @@ char* multistrcatsp(char* buf, ...)
     return buf;
 }
 
+char* safe_strncpy(char* dst, const char* src, size_t size)
+{
+	if (size > 0) {
+		register char *d = dst;
+		register const char *s = src;
+
+		do {
+			if ((*d++ = *s++) == 0) {
+				/* NUL pad the remaining n-1 bytes */
+				while (--size > 0) *d++ = 0;
+				break;
+			}
+		} while (--size > 0);
+		*d = 0;
+	}
+	return (dst);
+}
+
+void get_time_string(char buffer[], unsigned buffer_size, time_t timestamp, char* pattern)
+{
+    struct tm* tm_info;
+    tm_info = localtime(&timestamp);
+    strftime(buffer, buffer_size, pattern, tm_info);
+    return;
+}
+
+void get_now_string(char buffer[], unsigned buffer_size, char* pattern)
+{
+    time_t rawtime;
+    time(&rawtime);
+    get_time_string(buffer, buffer_size, rawtime, pattern);
+    return;
+}
+
+int safe_stricmp(const char *s1, const char *s2)
+{
+    for (;;) {
+        if (*s1 != *s2) {
+            int c1 = toupper((unsigned char)*s1);
+            int c2 = toupper((unsigned char)*s2);
+
+            if (c2 != c1) {
+                return c2 > c1 ? -1 : 1;
+            }
+        } else {
+            if (*s1 == '\0') {
+                return 0;
+            }
+        }
+        ++s1;
+        ++s2;
+    }
+}
+
+int safe_strnicmp(const char *s1, const char *s2, size_t n)
+{
+    for (;;) {
+        if (n-- == 0) {
+            return 0;
+        }
+        if (*s1 != *s2) {
+            int c1 = toupper((unsigned char)*s1);
+            int c2 = toupper((unsigned char)*s2);
+
+            if (c2 != c1) {
+                return c2 > c1 ? -1 : 1;
+            }
+        } else {
+            if (*s1 == '\0') {
+                return 0;
+            }
+        }
+        ++s1;
+        ++s2;
+    }
+}
+
 //! Increase or Decrease an array à la \e vector
 /**
 	\param f_caller : name of the calling function for logging purpose
@@ -648,8 +631,7 @@ char* multistrcatsp(char* buf, ...)
 	\param curr_size_allocated : current allocated size to the array (in BYTE)
 	\param grow_step : bloc size of expansion of the array (in BYTE)
 */
-void
-Array_Check_Size( const char *f_caller, char **array, int new_size, int *curr_size_allocated, int grow_step )
+void Array_Check_Size( const char *f_caller, char **array, int new_size, int *curr_size_allocated, int grow_step )
 {
     // Deallocation
     if( new_size <= 0 )
@@ -669,7 +651,7 @@ Array_Check_Size( const char *f_caller, char **array, int new_size, int *curr_si
         *array = malloc(*curr_size_allocated );
         if( *array == NULL)
         {
-            shutdown(1, "Out Of Memory!  Failed in %s\n", f_caller);
+            borShutdown(1, "Out Of Memory!  Failed in %s\n", f_caller);
         }
         memset( *array, 0, *curr_size_allocated );
         return;
@@ -693,7 +675,7 @@ Array_Check_Size( const char *f_caller, char **array, int new_size, int *curr_si
     void *copy = malloc(*curr_size_allocated );
     if(copy == NULL)
     {
-        shutdown(1, "Out Of Memory!  Failed in %s\n", f_caller);
+        borShutdown(1, "Out Of Memory!  Failed in %s\n", f_caller);
     }
 
     // Copy the previous content of the array

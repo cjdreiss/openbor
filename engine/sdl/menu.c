@@ -193,7 +193,7 @@ static int findPaks(void)
 					free(copy); copy = NULL;
 				}
 				memset(&filelist[i], 0, sizeof(fileliststruct));
-				strncpy(filelist[i].filename, ds->d_name, strlen(ds->d_name));
+				strcpy(filelist[i].filename, ds->d_name);
 				i++;
 			}
 		}
@@ -265,12 +265,26 @@ static s_screen *getPreview(char *filename)
 	// Grab current path and filename
 	getBasePath(packfile, filename, 1);
 	// Create & Load & Scale Image
-	if(!loadscreen("data/bgs/title", packfile, NULL, PIXEL_x8, &title)) return NULL;
-	scale = allocscreen(160, 120, PIXEL_x8);
-	scalescreen(scale, title);
+	if(!loadscreen("data/bgs/title", packfile, NULL, PIXEL_x8, &title) &&
+	   !loadscreen32("data/bgs/title", packfile, &title))
+	{
+		return NULL;
+	}
+	if((scale = allocscreen(160, 120, title->pixelformat)) == NULL) return NULL;
+
+	if (title->pixelformat == PIXEL_32)
+	{
+		scalescreen32(scale, title);
+	}
+	else
+	{
+		scalescreen(scale, title);
+	}
 	memcpy(scale->palette, title->palette, PAL_BYTES);
+
 	// ScreenShots within Menu will be saved as "Menu"
-	strncpy(packfile,"Menu.xxx",128);
+	strncpy(packfile,"Menu.xxx",MAX_FILENAME_LEN);
+
 	freescreen(&title);
 	return scale;
 }
@@ -296,7 +310,7 @@ static int ControlMenu()
 	int status = -1;
 	int dListMaxDisplay = 17;
 	bothnewkeys = 0;
-	inputrefresh();
+	inputrefresh(0);
 	switch(bothnewkeys)
 	{
 		case FLAG_MOVEUP:
@@ -360,7 +374,7 @@ static int ControlBGM()
 	int status = -2;
 	int dListMaxDisplay = 17;
 	bothnewkeys = 0;
-	inputrefresh();
+	inputrefresh(0);
 	switch(bothnewkeys)
 	{
 		case FLAG_MOVEUP:
@@ -475,7 +489,7 @@ static void initMenu(int type)
 	control_init(2);
 	apply_controls();
 	sound_init(12);
-	sound_start_playback(savedata.soundbits,savedata.soundrate);
+	sound_start_playback();
 }
 
 static void termMenu()
@@ -490,6 +504,13 @@ static void termMenu()
 	control_exit();
 }
 
+static void blit_video_menu(s_screen* vscreen)
+{
+    video_stretch(1); // set to fullscreen
+    video_copy_screen(vscreen);
+    video_stretch(savedata.stretch); // reset to saved value
+}
+
 static void drawMenu()
 {
 	char listing[45] = {""};
@@ -500,23 +521,23 @@ static void drawMenu()
 
 	putscreen(vscreen,bgscreen,0,0,NULL);
 	if(dListTotal < 1) printText((isWide ? 30 : 8), (isWide ? 33 : 24), RED, 0, 0, "No Mods In Paks Folder!");
-	for(list=0; list<dListTotal; list++)
+	for(list = 0; list < dListTotal; list++)
 	{
-		if(list<18)
+		if(list < 18)
 		{
+		    int len = strlen(filelist[list+dListScrollPosition].filename)-4;
 			shift = 0;
 			colors = GRAY;
 			strncpy(listing, "", (isWide ? 44 : 28));
-			if(strlen(filelist[list+dListScrollPosition].filename)-4 < (isWide ? 44 : 28))
-				strncpy(listing, filelist[list+dListScrollPosition].filename, strlen(filelist[list+dListScrollPosition].filename)-4);
-			if(strlen(filelist[list+dListScrollPosition].filename)-4 > (isWide ? 44 : 28))
-				strncpy(listing, filelist[list+dListScrollPosition].filename, (isWide ? 44 : 28));
+			if(len < (isWide ? 44 : 28))
+                safe_strncpy(listing, filelist[list+dListScrollPosition].filename, len);
+			else
+				safe_strncpy(listing, filelist[list+dListScrollPosition].filename, (isWide ? 44 : 28));
 			if(list == dListCurrentPosition)
 			{
 				shift = 2;
 				colors = RED;
 				Image = getPreview(filelist[list+dListScrollPosition].filename);
-
 			}
 			printText((isWide ? 30 : 7) + shift, (isWide ? 33 : 22)+(11*list) , colors, 0, 0, "%s", listing);
 		}
@@ -552,7 +573,7 @@ static void drawMenu()
 	else
 		printText((isWide ? 288 : 157), (isWide ? 141 : 130), RED, 0, 0, "No Preview Available!");
 
-	video_copy_screen(vscreen);
+	blit_video_menu(vscreen);
 }
 
 static void drawBGMPlayer()
@@ -561,6 +582,7 @@ static void drawBGMPlayer()
 	char t1[64] = "", t2[25] = "Unknown";
 	char a1[64] = "", a2[25] = "Unknown";
 	int list = 0, colors = 0, shift = 0;
+	int filename_len = strlen(filelist[bgmCurrent].filename)-4;
 
 	// Allocate Preview Box for Music Text Info.
 	putscreen(vscreen,bgscreen,0,0,NULL);
@@ -568,15 +590,16 @@ static void drawBGMPlayer()
 
 	for(list=0; list<dListTotal; list++)
 	{
-		if(list<18)
+		if(list < 18)
 		{
+		    int len = strlen(filelist[list+dListScrollPosition].filename)-4;
 			shift = 0;
 			colors = GRAY;
 			strncpy(listing, "", (isWide ? 44 : 28));
-			if(strlen(filelist[list+dListScrollPosition].filename)-4 < (isWide ? 44 : 28))
-				strncpy(listing, filelist[list+dListScrollPosition].filename, strlen(filelist[list+dListScrollPosition].filename)-4);
-			if(strlen(filelist[list+dListScrollPosition].filename)-4 > (isWide ? 44 : 28))
-				strncpy(listing, filelist[list+dListScrollPosition].filename, (isWide ? 44 : 28));
+			if(len < (isWide ? 44 : 28))
+				safe_strncpy(listing, filelist[list+dListScrollPosition].filename, len);
+			else
+				safe_strncpy(listing, filelist[list+dListScrollPosition].filename, (isWide ? 44 : 28));
 			if(list==dListCurrentPosition) { shift = 2; colors = RED; }
 			printText((isWide ? 30 : 7) + shift, (isWide ? 33 : 22)+(11*list) , colors, 0, 0, "%s", listing);
 		}
@@ -597,7 +620,7 @@ static void drawBGMPlayer()
 	printText((isWide ? 390 : 244),(isWide ? 251 : 226), WHITE, 0, 0, "%s: Exit Player", control_getkeyname(savedata.keys[0][SDID_SPECIAL]));
 #endif
 	//CRxTRDude - Fixed the placement of these texts and appropriately changed the site for Chrono Crash
-  printText((isWide ? 320 : 188),(isWide ? 175 : 158), BLACK, 0, 0, "www.chronocrash.com");
+    printText((isWide ? 320 : 188),(isWide ? 175 : 158), BLACK, 0, 0, "www.chronocrash.com");
 	printText((isWide ? 322 : 190),(isWide ? 185 : 168), BLACK, 0, 0, "www.SenileTeam.com");
 
 #ifdef SPK_SUPPORTED
@@ -605,18 +628,18 @@ static void drawBGMPlayer()
 #endif
 
 	if(!bgmPlay) bgmCurrent = dListCurrentPosition+dListScrollPosition;
-	if(strlen(filelist[bgmCurrent].filename)-4 < 24)
-		strncpy(bgmListing, filelist[bgmCurrent].filename, strlen(filelist[bgmCurrent].filename)-4);
-	if(strlen(filelist[bgmCurrent].filename)-4 > 24)
-		strncpy(bgmListing, filelist[bgmCurrent].filename, 24);
+	if(filename_len < 24)
+		safe_strncpy(bgmListing, filelist[bgmCurrent].filename, strlen(filelist[bgmCurrent].filename) - 4);
+	else
+		safe_strncpy(bgmListing, filelist[bgmCurrent].filename, 24);
 	if(!sound_query_music(a1, t1))
 	{
 		PlayBGM();
 		sound_query_music(a1, t1);
 		StopBGM();
 	}
-	if(t1[0]) strncpy(t2, t1, 25);
-	if(a1[0]) strncpy(a2, a1, 25);
+	if(t1[0]) safe_strncpy(t2, t1, 25);
+	if(a1[0]) safe_strncpy(a2, a1, 25);
 	printText((isWide ? 288 : 157),(isWide ? 35 : 23) + (11 * 0), DARK_RED, 0, 0, "Game: %s", bgmListing);
 	printText((isWide ? 288 : 157),(isWide ? 35 : 23) + (11 * 1), bgmPlay ? DARK_GREEN : DARK_BLUE, 0, 0, "Total Tracks: %d", filelist[bgmCurrent].nTracks-1);
 	printText((isWide ? 288 : 157),(isWide ? 35 : 23) + (11 * 2), bgmPlay ? DARK_GREEN : DARK_BLUE, 0, 0, "Current Track: %d", filelist[bgmCurrent].bgmTrack);
@@ -624,7 +647,7 @@ static void drawBGMPlayer()
 	printText((isWide ? 288 : 157),(isWide ? 35 : 23) + (11 * 4), bgmPlay ? DARK_GREEN : DARK_BLUE, 0, 0, "Track: %s", t2);
 	printText((isWide ? 288 : 157),(isWide ? 35 : 23) + (11 * 5), bgmPlay ? DARK_GREEN : DARK_BLUE, 0, 0, "Artist: %s", a2);
 
-	video_copy_screen(vscreen);
+	blit_video_menu(vscreen);
 }
 
 static void drawLogs()
@@ -636,7 +659,7 @@ static void drawLogs()
 	{
 		// CRxTRDude - replaced bg with a log screen
 		putscreen(vscreen,logscreen,0,0,NULL);
-	    inputrefresh();
+	    inputrefresh(0);
 	    sound_update_music();
 #if OPENDINGUX
 	    printText(250, 3, RED, 0, 0, "Quit : Select");
@@ -675,17 +698,26 @@ static void drawLogs()
 		else if(i == SCRIPT_LOG) printText(5, 3, RED, 0, 0, "Log NOT Found: ScriptLog.txt");
 		else                     printText(5, 3, RED, 0, 0, "Log NOT Found: OpenBorLog.txt");
 
-	    video_copy_screen(vscreen);
+	    blit_video_menu(vscreen);
 	}
 	drawMenu();
 }
 
 static void drawLogo()
 {
+    int i;
+    int delay = 500;
+
     if(savedata.logo) return;
+
 	initMenu(0);
-	video_copy_screen(bgscreen);
-	SDL_Delay(3000);
+
+	for(i = 0; i < delay; i++)
+    {
+        blit_video_menu(bgscreen);
+        SDL_Delay(1);
+    }
+
 	termMenu();
 }
 
@@ -725,6 +757,9 @@ void Menu()
 			switch(ctrl)
 			{
 				case 1:
+					if (dListTotal > 0) done = 1;
+					break;
+
 				case 2:
 					done = 1;
 					break;
@@ -738,9 +773,14 @@ void Menu()
 					break;
 
 				case -2:
-					drawBGMPlayer();
+				    if (dListTotal > 0) drawBGMPlayer();
+					break;
+
+                default:
 					break;
 			}
+
+            blit_video_menu(vscreen);
 		}
 		freeAllLogs();
 		termMenu();

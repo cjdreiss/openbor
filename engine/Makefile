@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------------------------------
 # All rights reserved, see LICENSE in OpenBOR root for details.
 #
-# Copyright (c) 2004 - 2014 OpenBOR Team
+# Copyright (c) 2004 - 2018 OpenBOR Team
 #
 
 #----------------------------------------------------------------------------------------------------
@@ -55,8 +55,10 @@ BUILDING        = 1
 YASM 	        = yasm$(EXTENSION)
 CC              = $(WINDEV)/$(PREFIX)gcc$(EXTENSION)
 INCLUDES        = $(SDKPATH)/include \
-                  $(SDKPATH)/include/SDL2
-LIBRARIES       = $(SDKPATH)/lib
+                  $(SDKPATH)/include/SDL2 \
+		  $(EXTRA_INCLUDES)
+LIBRARIES       = $(SDKPATH)/lib \
+		  $(EXTRA_LIBRARIES)
 ARCHFLAGS       = -m32
 ifeq ($(findstring 86, $(TARGET_ARCH)), 86)
 BUILD_MMX       = 1
@@ -303,7 +305,6 @@ GAME	        = source/gamelib/draw.o                                            
                   source/gamelib/sprite.o                                                          \
                   source/gamelib/spritex8p16.o                                                      \
                   source/gamelib/spritex8p32.o                                                      \
-                  source/gamelib/commands.o                                                         \
                   source/gamelib/models.o                                                           \
                   source/gamelib/transform.o
 SCRIPT          = source/scriptlib/StackedSymbolTable.o                                             \
@@ -320,14 +321,21 @@ SCRIPT          = source/scriptlib/StackedSymbolTable.o                         
                   source/preprocessorlib/pp_lexer.o                                                 \
                   source/preprocessorlib/pp_parser.o                                                \
                   source/preprocessorlib/pp_expr.o
-SCRIPT_BUILTINS = source/openborscript/animation.o                                                  \
+SCRIPT_BUILTINS = source/openborscript/commands.o                                                   \
+				  source/openborscript/animation.o                                                  \
+				  source/openborscript/axis.o                                           			\
+				  source/openborscript/binding.o                                           			\
+				  source/openborscript/drawmethod.o                                           		\
                   source/openborscript/collision_attack.o                                           \
                   source/openborscript/collision_body.o                                             \
-                  source/openborscript/constant.o                                                   \
+				  source/openborscript/collision_entity.o                                           \
+                  source/openborscript/constants.o                                                  \
+                  source/openborscript/entity.o                                                   	\
                   source/openborscript/index.o                                                      \
                   source/openborscript/layer.o                                                      \
                   source/openborscript/level.o                                                      \
                   source/openborscript/math.o                                                       \
+				  source/openborscript/recursive_damage.o											\
                   source/openborscript/string.o
 RAM             = source/ramlib/ram.o
 RAND	        = source/randlib/rand32.o
@@ -482,10 +490,9 @@ endif
 
 
 ifdef BUILD_WII
-CFLAGS 	       += -DCACHE_BACKGROUNDS -DREVERSE_COLOR -D__ppc__ $(MACHDEP) -Wl,-Map,$(TARGET_MAP)
-ifdef BUILD_ELM
-CFLAGS         += -DUSE_LIBELM
-endif
+CFLAGS 	       += -DCACHE_BACKGROUNDS -DREVERSE_COLOR -D__ppc__ $(MACHDEP) -Wl,-Map,$(TARGET_MAP),-wrap,wiiuse_register
+# This allows to compile with DevkitPPC r29 and above.
+CFLAGS 	       += -U__INT32_TYPE__ -U __UINT32_TYPE__ -D__INT32_TYPE__=int
 endif
 
 
@@ -562,15 +569,22 @@ endif
 
 ifdef BUILD_SDL
 ifeq ($(findstring DGE, $(SDKPATH)), DGE)
-LIBS           += -lSDL -lSDL_gfx -lts
+LIBS           += -lSDL -lts
 else
-LIBS           += -Wl,-rpath,$(LIBRARIES) -lSDL2 -lSDL2_gfx
+COMMA		=,
+RPATH_LIBS	= $(addprefix -Wl$(COMMA)-rpath$(COMMA),"$(LIBRARIES)")
+LIBS	       += $(RPATH_LIBS) -lSDL2
+
+ifdef CROSSCOMPILE_LINUX_WIN
+LIBS	       += -lsetupapi
+endif
+
 endif
 endif
 
 
 ifdef BUILD_WIN
-LIBS           += -lpsapi -lopengl32 -lwinmm -lole32 -loleaut32 -limm32 -lversion -mwindows
+LIBS           += -lpsapi -lopengl32 -lwinmm -lole32 -loleaut32 -luuid -limm32 -lversion -mwindows
 endif
 
 
@@ -580,11 +594,7 @@ endif
 
 
 ifdef BUILD_WII
-ifdef BUILD_ELM
-LIBS           += -lelm -lwiiuse -lbte -lasnd -logc
-else
-LIBS           += -lwiiuse -lbte -lfat -lasnd -logc
-endif
+LIBS           += -lwupc -lwiiuse -lbte -lfat -lasnd -logc
 endif
 
 
@@ -612,6 +622,9 @@ endif
 
 ifdef BUILD_WEBM
 LIBS           += -lvpx
+ifdef CROSSCOMPILE_LINUX_WIN
+LIBS	       += -lpthread
+endif
 endif
 
 
@@ -748,7 +761,7 @@ ifndef BUILD_PSP
 clean-all: clean-releases clean
 
 clean-releases:
-	@rm -rf releases/*
+	@if [ -d ./releases ]; then rm -rf ./releases; fi
 
 clean:
 	@echo
@@ -765,6 +778,6 @@ version:
 	@echo "All rights reserved."
 	@echo "See LICENSE and README within OpenBOR root for details."
 	@echo
-	@echo "Copyright (c) 2004 - 2017 OpenBOR Team"
+	@echo "Copyright (c) 2004 - 2018 OpenBOR Team"
 	@echo "-------------------------------------------------------"
 

@@ -12,6 +12,12 @@
 #include "Interpreter.h"
 #include "pp_parser.h"
 
+#include "axis.h"
+#include "binding.h"
+#include "drawmethod.h"
+#include "recursive_damage.h"
+#include "entity.h"
+
 #define MAX_GLOBAL_VAR 2048
 #define MAX_KEY_LEN    24
 
@@ -19,6 +25,8 @@
 #define script_magic ((int)0x73636f)
 //vlst
 #define varlist_magic ((int)0x74736c76)
+
+
 
 typedef enum
 {
@@ -153,6 +161,12 @@ HRESULT openbor_get_body_collision_instance(ScriptVariant **varlist , ScriptVari
 HRESULT openbor_get_body_collision_property(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_set_body_collision_property(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 
+// Entity collision (ebox) properties
+HRESULT openbor_get_entity_collision_collection(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_get_entity_collision_instance(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_get_entity_collision_property(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_set_entity_collision_property(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+
 HRESULT openbor_getplayerproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_getentityproperty(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_clearspawnentry(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
@@ -212,6 +226,7 @@ HRESULT openbor_checkplatformabove(ScriptVariant **varlist , ScriptVariant **pre
 HRESULT openbor_checkplatformbetween(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_checkbasemap(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_checkbasemapindex(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_checkbase(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_generatebasemap(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 
 HRESULT openbor_openfilestream(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
@@ -265,6 +280,7 @@ HRESULT openbor_setidle(ScriptVariant **varlist , ScriptVariant **pretvar, int p
 HRESULT openbor_getentity(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 
 HRESULT openbor_loadmodel(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
+HRESULT openbor_unload_model(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_loadsprite(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_hallfame(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
 HRESULT openbor_menu_options(ScriptVariant **varlist , ScriptVariant **pretvar, int paramCount);
@@ -325,10 +341,12 @@ int mapstrings_levelproperty(ScriptVariant **varlist, int paramCount);
 
 int mapstrings_attackproperty(ScriptVariant **varlist, int paramCount);
 
+
 enum systemvariant_enum
 {
     _sv_background,
     _sv_blockade,
+    _sv_bossescount,
     _sv_branchname,
     _sv_cheats,
     _sv_count_enemies,
@@ -341,6 +359,7 @@ enum systemvariant_enum
     _sv_current_scene,
     _sv_current_set,
     _sv_current_stage,
+	_sv_drawmethod_default,
     _sv_effectvol,
     _sv_elapsed_time,
     _sv_ent_max,
@@ -370,7 +389,10 @@ enum systemvariant_enum
     _sv_in_system_options,
     _sv_in_titlescreen,
     _sv_in_video_options,
-    _sv_lasthita,
+	_sv_lasthit_attack,
+	_sv_lasthit_attacker,
+	_sv_lasthit_target,
+	_sv_lasthita,
     _sv_lasthitc,
     _sv_lasthitt,
     _sv_lasthitx,
@@ -401,6 +423,7 @@ enum systemvariant_enum
     _sv_noscreenshot,
     _sv_noshowcomplete,
     _sv_numbasemaps,
+    _sv_numbosses,
     _sv_numholes,
     _sv_numlayers,
     _sv_numpalettes,
