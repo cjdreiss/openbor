@@ -69,6 +69,13 @@
 
 /////////////////////////////////////////////////////////////////////////////
 
+#define		exit				borExit
+#define		time				borTime
+#define		kill				borKill
+#define		pause				borPause
+#define		shutdown			borShutdown
+
+#ifndef SWITCH
 #ifndef PP_TEST
 #define printf writeToLogFile
 
@@ -76,6 +83,7 @@
 #undef assert
 #define assert(x)    exitIfFalse((x)?1:0, #x, __func__, __FILE__, __LINE__)
 #define sysassert(x) abortIfFalse((x)?1:0, #x, __func__, __FILE__, __LINE__)
+#endif
 #endif
 
 /////////////////////////////////////////////////////////////////////////////

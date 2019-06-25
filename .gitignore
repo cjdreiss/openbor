@@ -2,6 +2,7 @@
 *.d
 *.Td
 OpenBOR.elf
+OpenBOR.nro
 meta.xml
 /engine/version.h
 /engine/resources/Info.plist
@@ -15,3 +16,6 @@ tools/bin/.wget-hsts
 tools/win-sdk/*
 tools/psp-sdk/*
 tools/devkitpro/*
+tools/
+cmake-*
+.idea
