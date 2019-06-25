@@ -34,14 +34,11 @@
 #define tellpackfile(hnd)            ftell((FILE*)hnd)
 #define closepackfile(hnd)            fclose((FILE*)hnd)
 #define printf(msg, args...)        fprintf(stderr, msg, ##args)
-#define shutdown(ret, msg, args...) { fprintf(stderr, msg, ##args); exit(ret); }
+#define borShutdown(ret, msg, args...) { fprintf(stderr, msg, ##args); exit(ret); }
 extern char *get_full_path(char *filename);
 #else // otherwise, we can use OpenBOR functionality like writeToLogFile
-#include "openbor.h"
-#include "globals.h"
 #include "packfile.h"
 #define tellpackfile(hnd)            seekpackfile(hnd, 0, SEEK_CUR)
-#undef time
 #endif
 
 /**
@@ -708,12 +705,12 @@ HRESULT pp_parser_stringify(pp_parser *self)
         {
             if(*source == '"')
             {
-                strncat(self->token.theSource, "\\\"", 2);
+                strcat(self->token.theSource, "\\\"");
                 in_string = !in_string;
             }
             else if(*source == '\\' && in_string)
             {
-                strncat(self->token.theSource, "\\\\", 2);
+                strcat(self->token.theSource, "\\\\");
             }
             else
             {
@@ -729,7 +726,7 @@ HRESULT pp_parser_stringify(pp_parser *self)
         }
     }
 
-    strncat(self->token.theSource, "\"", 1);
+    strcat(self->token.theSource, "\"");
     return S_OK;
 }
 

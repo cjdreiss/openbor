@@ -217,7 +217,7 @@ Label Parser_CreateLabel( Parser *pparser )
     //Increment the label count.
     pparser->LabelCount++;
 
-    sprintf(theLabel, "L%d", pparser->LabelCount);
+    sprintf(theLabel, "L%ld", (long)pparser->LabelCount);
 
     return theLabel;
 }
@@ -1756,7 +1756,7 @@ void Parser_Mult_expr2(Parser *pparser )
 
 void Parser_Unary_expr(Parser *pparser )
 {
-    static CHAR buf[MAX_TOKEN_LENGTH + 1];
+    static CHAR buf[MAX_TOKEN_LENGTH + 2];
     Instruction *pInstruction = NULL;
 
     if (ParserSet_First(&(pparser->theParserSet), postfix_expr, pparser->theNextToken.theType ))

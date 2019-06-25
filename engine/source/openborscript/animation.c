@@ -28,7 +28,6 @@ HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **
     #define ARG_HANDLE      0   // Handle (pointer to property structure).
     #define ARG_PROPERTY    1   // Property to access.
 
-
     int                     result      = S_OK; // Success or error?
     s_anim                  *handle     = NULL; // Property handle.
     e_animation_properties  property    = 0;    // Property argument.
@@ -96,6 +95,17 @@ HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **
 
             break;
 
+        case ANI_PROP_ENTITY_COLLISION:
+
+            // Verify animation has any bbox.
+            if(handle->collision_entity)
+            {
+                ScriptVariant_ChangeType(*pretvar, VT_PTR);
+                (*pretvar)->ptrVal = (VOID *)handle->collision_entity;
+            }
+
+            break;
+
         case ANI_PROP_BOUNCE:
 
             ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
@@ -111,8 +121,8 @@ HRESULT openbor_get_animation_property(ScriptVariant **varlist, ScriptVariant **
 
         case ANI_PROP_CHARGETIME:
 
-            ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-            (*pretvar)->dblVal = (DOUBLE)handle->chargetime;
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)handle->chargetime;
             break;
 
         case ANI_PROP_COUNTERRANGE:
@@ -176,7 +186,7 @@ HRESULT openbor_set_animation_property(ScriptVariant **varlist, ScriptVariant **
 
     // Value carriers to apply on properties after
     // taken from argument.
-    int     temp_int;
+    LONG     temp_int;
     //DOUBLE  temp_float;
 
     // Verify incoming arguments. There must be a

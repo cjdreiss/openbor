@@ -18,6 +18,7 @@
 // Libraries
 
 #ifdef WIN
+#define _WIN32_WINNT 0x0500
 #include <windows.h>
 #include <psapi.h>
 #elif DARWIN
@@ -74,11 +75,11 @@ extern unsigned long start;
 u64 getFreeRam(int byte_size)
 {
 #if WIN
-    MEMORYSTATUS stat;
-    memset(&stat, 0, sizeof(MEMORYSTATUS));
-    stat.dwLength = sizeof(MEMORYSTATUS);
-    GlobalMemoryStatus(&stat);
-    return stat.dwAvailPhys / byte_size;
+    MEMORYSTATUSEX stat;
+    memset(&stat, 0, sizeof(MEMORYSTATUSEX));
+    stat.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&stat);
+    return stat.ullAvailPhys / byte_size;
 #elif DARWIN
     vm_size_t size;
     unsigned int count = HOST_VM_INFO_COUNT;
@@ -128,11 +129,11 @@ u64 getFreeRam(int byte_size)
 void setSystemRam()
 {
 #if WIN
-    MEMORYSTATUS stat;
-    memset(&stat, 0, sizeof(MEMORYSTATUS));
-    stat.dwLength = sizeof(MEMORYSTATUS);
-    GlobalMemoryStatus(&stat);
-    systemRam = stat.dwTotalPhys;
+    MEMORYSTATUSEX stat;
+    memset(&stat, 0, sizeof(MEMORYSTATUSEX));
+    stat.dwLength = sizeof(MEMORYSTATUSEX);
+    GlobalMemoryStatusEx(&stat);
+    systemRam = stat.ullTotalPhys;
 #elif DARWIN
     u64 mem;
     size_t len = sizeof(mem);
@@ -239,9 +240,13 @@ u64 getUsedRam(int byte_size)
 
 void getRamStatus(int byte_size)
 {
-    printf("Total Ram: %"PRIu64" Bytes\n Free Ram: %"PRIu64" Bytes\n Used Ram: %"PRIu64" Bytes\n\n",
-           getSystemRam(byte_size),
-           getFreeRam(byte_size),
-           getUsedRam(byte_size));
+  u64 system_ram = getSystemRam(byte_size);
+  u64 free_ram = getFreeRam(byte_size);
+  u64 used_ram = getUsedRam(byte_size);
+
+  printf("Total Ram: %11"PRIu64" Bytes ( %5"PRIu64" MB )\n Free Ram: %11"PRIu64" Bytes ( %5"PRIu64" MB )\n Used Ram: %11"PRIu64" Bytes ( %5"PRIu64" MB )\n\n",
+           system_ram, system_ram >> 20,
+           free_ram, free_ram >> 20,
+           used_ram, used_ram >> 20);
 }
 

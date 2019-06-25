@@ -22,20 +22,15 @@
 #undef main
 #endif
 
-#ifdef SDL
-#define appExit exit
-#undef exit
-#endif
-
-char packfile[128] = {"bor.pak"};
+char packfile[MAX_FILENAME_LEN] = {"bor.pak"};
 #if ANDROID
 #include <unistd.h>
-char rootDir[128] = {"/mnt/sdcard/OpenBOR"};
+char rootDir[MAX_BUFFER_LEN] = {""};
 #endif
-char paksDir[128] = {"Paks"};
-char savesDir[128] = {"Saves"};
-char logsDir[128] = {"Logs"};
-char screenShotsDir[128] = {"ScreenShots"};
+char paksDir[MAX_FILENAME_LEN] = {"Paks"};
+char savesDir[MAX_FILENAME_LEN] = {"Saves"};
+char logsDir[MAX_FILENAME_LEN] = {"Logs"};
+char screenShotsDir[MAX_FILENAME_LEN] = {"ScreenShots"};
 
 // sleeps for the given number of microseconds
 #if _POSIX_C_SOURCE >= 199309L
@@ -48,31 +43,41 @@ void _usleep(u32 usec)
 }
 #endif
 
+#if ANDROID
+char* AndroidRoot(char *relPath)
+{
+	static char filename[MAX_FILENAME_LEN];
+	strcpy(filename, rootDir);
+	strcat(filename, relPath);
+	return filename;
+}
+#endif
+
 void borExit(int reset)
 {
-
 #ifdef GP2X
 	gp2x_end();
 	chdir("/usr/gp2x");
 	execl("/usr/gp2x/gp2xmenu", "/usr/gp2x/gp2xmenu", NULL);
-#else
+#elif SDL
 	SDL_Delay(1000);
+	SDL_Quit(); // call this instead of atexit(SDL_Quit); It's best practice!
 #endif
 
-	appExit(0);
+    exit(reset);
 }
 
 int main(int argc, char *argv[])
 {
 #ifndef SKIP_CODE
-	char pakname[256];
+	char pakname[MAX_FILENAME_LEN] = {""};
 #endif
 #ifdef CUSTOM_SIGNAL_HANDLER
 	struct sigaction sigact;
 #endif
 
 #ifdef DARWIN
-	char resourcePath[PATH_MAX];
+	char resourcePath[PATH_MAX] = {""};
 	CFBundleRef mainBundle;
 	CFURLRef resourcesDirectoryURL;
 	mainBundle = CFBundleGetMainBundle();
@@ -92,7 +97,7 @@ int main(int argc, char *argv[])
 	if(sigaction(SIGSEGV, &sigact, NULL) != 0)
 	{
 		printf("Error setting signal handler for %d (%s)\n", SIGSEGV, strsignal(SIGSEGV));
-		exit(EXIT_FAILURE);
+		borExit(EXIT_FAILURE);
 	}
 #endif
 
@@ -100,23 +105,37 @@ int main(int argc, char *argv[])
 	initSDL();
 
 	packfile_mode(0);
+
 #ifdef ANDROID
+    if(strstr(SDL_AndroidGetExternalStoragePath(), "org.openbor.engine"))
+    {
+        strcpy(rootDir, "/mnt/sdcard/OpenBOR/");
+        strcpy(paksDir, "/mnt/sdcard/OpenBOR/Paks");
+        strcpy(savesDir, "/mnt/sdcard/OpenBOR/Saves");
+        strcpy(logsDir, "/mnt/sdcard/OpenBOR/Logs");
+        strcpy(screenShotsDir, "/mnt/sdcard/OpenBOR/ScreenShots");
+    }
+    else
+    {
+        strcpy(rootDir, SDL_AndroidGetExternalStoragePath());
+        strcat(rootDir, "/");
+        strcpy(paksDir, SDL_AndroidGetExternalStoragePath());
+        strcat(paksDir, "/Paks");
+        strcpy(savesDir, SDL_AndroidGetExternalStoragePath());
+        strcat(savesDir, "/Saves");
+        strcpy(logsDir, SDL_AndroidGetExternalStoragePath());
+        strcat(logsDir, "/Logs");
+        strcpy(screenShotsDir, SDL_AndroidGetExternalStoragePath());
+        strcat(screenShotsDir, "/ScreenShots");
+    }
 	dirExists(rootDir, 1);
     chdir(rootDir);
 #endif
+
 	dirExists(paksDir, 1);
 	dirExists(savesDir, 1);
 	dirExists(logsDir, 1);
 	dirExists(screenShotsDir, 1);
-
-#ifdef ANDROID
-    if(dirExists("/mnt/usbdrive/OpenBOR/Paks", 0))
-        strcpy(paksDir, "/mnt/usbdrive/OpenBOR/Paks");
-    else if(dirExists("/usbdrive/OpenBOR/Paks", 0))
-        strcpy(paksDir, "/usbdrive/OpenBOR/Paks");
-    else if(dirExists("/mnt/extsdcard/OpenBOR/Paks", 0))
-        strcpy(paksDir, "/mnt/extsdcard/OpenBOR/Paks");
-#endif
 
 	Menu();
 #ifndef SKIP_CODE

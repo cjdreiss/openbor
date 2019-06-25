@@ -12,6 +12,8 @@
 #include "globals.h"
 #include "ScriptVariant.h"
 
+#define STRCACHE_INC      64
+
 typedef struct
 {
     int len;
@@ -20,7 +22,6 @@ typedef struct
 } Varstr;
 
 // use string cache to cut the memory usage down, because not all variants are string, no need to give each of them an array
-#define STRCACHE_INC      64
 Varstr *strcache = NULL;
 int   strcache_size = 0;
 int   strcache_top = -1;
@@ -263,7 +264,7 @@ void ScriptVariant_ToString(ScriptVariant *svar, LPSTR buffer )
         sprintf( buffer, "<VT_EMPTY>   Unitialized" );
         break;
     case VT_INTEGER:
-        sprintf( buffer, "%d", svar->lVal);
+        sprintf( buffer, "%ld", (long)svar->lVal);
         break;
     case VT_DECIMAL:
         sprintf( buffer, "%lf", svar->dblVal );
@@ -287,7 +288,7 @@ static int ScriptVariant_LengthAsString(ScriptVariant *svar)
     case VT_EMPTY:
         return snprintf(NULL, 0, "<VT_EMPTY>   Unitialized");
     case VT_INTEGER:
-        return snprintf(NULL, 0, "%d", svar->lVal);
+        return snprintf(NULL, 0, "%ld", (long)svar->lVal);
     case VT_DECIMAL:
         return snprintf(NULL, 0, "%lf", svar->dblVal);
     case VT_PTR:
@@ -325,7 +326,7 @@ void ScriptVariant_Copy(ScriptVariant *svar, ScriptVariant *rightChild )
         break;
     default:
         //should not happen unless the variant is not intialized correctly
-        //shutdown(1, "invalid variant type");
+        //borShutdown(1, "invalid variant type");
         svar->ptrVal = NULL;
         break;
     }
@@ -925,6 +926,7 @@ void ScriptVariant_Neg( ScriptVariant *svar)
     {
     case VT_DECIMAL:
         svar->dblVal = -(svar->dblVal);
+		break;
     case VT_INTEGER:
         svar->lVal = -(svar->lVal);
     default:

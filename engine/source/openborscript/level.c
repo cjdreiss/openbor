@@ -263,7 +263,7 @@ HRESULT openbor_set_set_property(ScriptVariant **varlist, ScriptVariant **pretva
 
     // Value carriers to apply on properties after
     // taken from argument.
-    //int     temp_int;
+    //LONG     temp_int;
     //DOUBLE  temp_float;
 
     // Verify incoming arguments. There must be a
@@ -411,7 +411,7 @@ HRESULT openbor_get_level_property(ScriptVariant **varlist, ScriptVariant **pret
         case LEVEL_PROP_BOSS_COUNT:
 
             ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
-            (*pretvar)->lVal = (LONG)handle->bosses;
+            (*pretvar)->lVal = (LONG)handle->bossescount;
             break;
 
         case LEVEL_PROP_BOSS_MUSIC_NAME:
@@ -669,6 +669,12 @@ HRESULT openbor_get_level_property(ScriptVariant **varlist, ScriptVariant **pret
             (*pretvar)->strVal = StrCache_CreateNewFrom(handle->name);
             break;
 
+        case LEVEL_PROP_NUM_BOSSES:
+
+            ScriptVariant_ChangeType(*pretvar, VT_INTEGER);
+            (*pretvar)->lVal = (LONG)handle->numbosses;
+            break;
+
         case LEVEL_PROP_PALETTE_BLENDING_COLLECTION:
 
             if(handle->blendings)
@@ -923,7 +929,7 @@ HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pret
 
     // Value carriers to apply on properties after
     // taken from value argument.
-    int             temp_int;   // Integer type argument.
+    LONG             temp_int;   // Integer type argument.
     DOUBLE          temp_float; // Float type argument.
     ScriptVariant   *arg_value; // Argument input carrier.
 
@@ -1005,7 +1011,7 @@ HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pret
                 goto error_local;
             }
 
-            handle->bosses = temp_int;
+            handle->bossescount = temp_int;
             break;
 
         case LEVEL_PROP_BOSS_MUSIC_NAME:
@@ -1347,6 +1353,16 @@ HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pret
             strcpy(handle->name, (char *)StrCache_Get(arg_value->strVal));
             break;
 
+        case LEVEL_PROP_NUM_BOSSES:
+
+            if(FAILED(ScriptVariant_IntegerValue(arg_value, &temp_int)))
+            {
+                goto error_local;
+            }
+
+            handle->numbosses = temp_int;
+            break;
+
         case LEVEL_PROP_PALETTE_BLENDING_COLLECTION:
 
             // This property is read only.
@@ -1519,7 +1535,7 @@ HRESULT openbor_set_level_property(ScriptVariant **varlist, ScriptVariant **pret
                 goto error_local;
             }
 
-            handle->spawn = (s_axis_f *)arg_value->ptrVal;
+            handle->spawn = (s_axis_principal_float *)arg_value->ptrVal;
             break;
 
         case LEVEL_PROP_SPECIAL_DISABLE:
@@ -1802,13 +1818,13 @@ HRESULT openbor_getlevelproperty(ScriptVariant **varlist , ScriptVariant **pretv
     case _lp_bgspeed:
     {
         ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-        (*pretvar)->lVal = (DOUBLE)level->bgspeed;
+        (*pretvar)->dblVal = (DOUBLE)level->bgspeed;
         break;
     }
     case _lp_vbgspeed:
     {
         ScriptVariant_ChangeType(*pretvar, VT_DECIMAL);
-        (*pretvar)->lVal = (DOUBLE)level->vbgspeed;
+        (*pretvar)->dblVal = (DOUBLE)level->vbgspeed;
         break;
     }
     case _lp_cameraxoffset:
